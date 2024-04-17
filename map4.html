@@ -92,19 +92,18 @@
     </style>
 </head>
 <body>
-    
-    <!-- This code is dividing the page into sections with the map in one section. I use the 
-    class = to identify them. Then in all my getElementById, I have referenced the class of which div I want to put them in. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <div class="container">
         <div class="left-div">
             <div class="content">
-                <h2>Tax Revenue by State</h2>
+                <h2>Tax Revenue by State FIx</h2>
                 <p id="myInfo">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed malesuada, magna sit amet pretium convallis, risus nisl ullamcorper ex, et facilisis risus massa eget nulla. Mauris id sapien euismod, tincidunt mi vel, condimentum nulla.</p>
             </div>
         </div>
         <div id="map" class="right-div">
             <div class="content">
                 <h2>Right Div (2/3 of Screen)</h2>
+                <canvas id="barChart" width="400" height="400"></canvas>
                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed malesuada, magna sit amet pretium convallis, risus nisl ullamcorper ex, et facilisis risus massa eget nulla. Mauris id sapien euismod, tincidunt mi vel, condimentum nulla.</p>
             </div>
         </div>
@@ -128,28 +127,26 @@
 
         var geojsonLayer;
 
-        function getColor(year, medLegal, recLegal) {
-        if (medLegal === 0) {
-            return '#A9A9A9'; // Illegal
-        } 
-        if (!medLegal && recLegal) {
-            if (year >= recLegal) {
-                return '#5E67FA'; // Recreational Legal
-            } else {
-                return '#A9A9A9'; // Default color (Illegal or not specified)
-            }
-        }
-        if (medLegal && year >= medLegal && year < recLegal) {
-            return '#83DE7E'; // Medically Legal
-        }
-        return '#A9A9A9'; // Default color (Illegal or not specified)
+    function getColor(year, medLegal, recLegal) {
+    if (medLegal === 0 || medLegal > year) {
+        return '#A9A9A9'; // Illegal
+    } 
+    if (recLegal <= year) {
+        if (medLegal <= year)
+        return 'green'
     }
+    if (medLegal <= year) {
+        return 'pink'
+    }
+    
+    }
+
         //SLIDER
-        
         function style(feature) {
             var year = document.getElementById("yearSlider").value;
             var medLegal = feature.properties.year_med;
             var recLegal = feature.properties.year_rec;
+            console.log(year, medLegal, recLegal)
             return {
                 fillColor: getColor(year, medLegal, recLegal),
                 weight: 2,
@@ -160,6 +157,14 @@
             };
         }
 
+        // Define a function to attach the popup event listener
+        function attachPopupListener() {
+            geojsonLayer.eachLayer(function(layer) {
+                layer.on('click', function(e) {
+                    myPopup(e.target.feature);
+                });
+            });
+        }
         function updateMap(year) {
             document.getElementById("daYear").innerHTML = 'Year: ' + year;
             if (geojsonLayer) {
@@ -167,13 +172,16 @@
             }
             geojsonLayer = L.geoJSON(statesData, { style: style }).addTo(map);
         }
-
+        
         updateMap(1996);
-
+        
         document.getElementById('yearSlider').addEventListener('input', function() {
             var year = parseInt(this.value);
             updateMap(year);
+        attachPopupListener();
         });
+
+
 
         //LEGEND
         var legend = L.control({ position: 'bottomright' });
@@ -201,7 +209,7 @@
             if (e.properties.rate !== null) {
                 info += '<b>Rate</b>: ' + e.properties.rate + '<br>' + 
                 '<b>Allocation:</b> ' + e.properties.allocation;}
-    // EXAMPLE: after the getElement i say ('myInfo'). This refers back to the <p></p> in the div.
+
             document.getElementById('myInfo').innerHTML = info}
         
         geojsonLayer.eachLayer(function(layer) {
@@ -209,6 +217,65 @@
                 myPopup(e.target.feature)
             });
         });
+
+
+
+        // BAR GRAPH
+        function createBarGraph(geojsonLayer) {
+        // Initialize an object to store the counts for each year
+        var counts = {};
+        var stateName = geojsonLayer.feature.find(feature => feature.properties.NAME === stateName);
+        // Iterate through the features
+        geojsonLayer.features.forEach(function(feature) {
+            // Iterate through each property of the feature
+            for (var key in feature.properties) {
+                // Check if the property represents a year (assuming it starts with "year_")
+                if (key.startsWith("date_")) {
+                    var year = key.substring(5); // Extract the year from the key
+                    var number = feature.properties[key]; // Get the number value
+
+                    // Check if the year is not null
+                    if (number !== null) {
+                        // If the year already exists in the counts object, increment the count
+                        if (counts[year]) {
+                            counts[year] += number;
+                        } else {
+                            // Otherwise, initialize the count for the year
+                            counts[year] = number;
+                        }
+                    }
+                }
+            }
+        });
+
+        // Create a bar graph using the counts data
+        // (You can use any chart library of your choice, such as Chart.js or D3.js)
+        // Example using Chart.js:
+        var ctx = document.getElementById('barGraph').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(counts), // Years
+                datasets: [{
+                    label: 'Count',
+                    data: Object.values(counts), // Values
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Usage example:
+    createBarGraph(statesData);
     </script>
 </body>
 </html>
