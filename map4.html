@@ -92,6 +92,9 @@
     </style>
 </head>
 <body>
+    
+    <!-- This code is dividing the page into sections with the map in one section. I use the 
+    class = to identify them. Then in all my getElementById, I have referenced the class of which div I want to put them in. -->
     <div class="container">
         <div class="left-div">
             <div class="content">
@@ -142,6 +145,7 @@
         return '#A9A9A9'; // Default color (Illegal or not specified)
     }
         //SLIDER
+        
         function style(feature) {
             var year = document.getElementById("yearSlider").value;
             var medLegal = feature.properties.year_med;
@@ -197,7 +201,7 @@
             if (e.properties.rate !== null) {
                 info += '<b>Rate</b>: ' + e.properties.rate + '<br>' + 
                 '<b>Allocation:</b> ' + e.properties.allocation;}
-
+    // EXAMPLE: after the getElement i say ('myInfo'). This refers back to the <p></p> in the div.
             document.getElementById('myInfo').innerHTML = info}
         
         geojsonLayer.eachLayer(function(layer) {
