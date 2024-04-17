@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Document</title>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+         crossorigin=""/>
+         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+         crossorigin=""></script>
+    <style>
+        #map {
+            height: 500px;
+            width: 800px;
+            float: left;
+            z-index: 1
+        }
+        .leaflet-popup {
+            z-index: 1000 !important;
+        }
+
+        .legend {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .legend-item {
+            margin-bottom: 5px;
+        }
+
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            border-radius: 50%;
+        }
+
+        #slider-container {
+            position: absolute;
+            bottom: 60px;
+            left: 70px; 
+        }
+
+        * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    /* Styling the container */
+    .container {
+        display: flex;
+        height: 100vh; /* Full viewport height */
+    }
+
+    /* Styling the left div */
+    .left-div {
+        flex: 1; /* Takes up one third of the screen */
+        background-color: #f0f0f0; /* Light gray */
+    }
+
+    /* Styling the right div */
+    .right-div {
+        flex: 2; /* Takes up two thirds of the screen */
+        background-color: #e0e0e0; /* Lighter gray */
+    }
+
+    /* Adding some padding and margin for better visualization */
+    .content {
+        padding: 20px;
+        margin: 10px;
+    }
+
+    /* Just for better visibility */
+    .content h2 {
+        margin-bottom: 10px;
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-div">
+            <div class="content">
+                <h2>Tax Revenue by State</h2>
+                <p id="myInfo">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed malesuada, magna sit amet pretium convallis, risus nisl ullamcorper ex, et facilisis risus massa eget nulla. Mauris id sapien euismod, tincidunt mi vel, condimentum nulla.</p>
+            </div>
+        </div>
+        <div id="map" class="right-div">
+            <div class="content">
+                <h2>Right Div (2/3 of Screen)</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed malesuada, magna sit amet pretium convallis, risus nisl ullamcorper ex, et facilisis risus massa eget nulla. Mauris id sapien euismod, tincidunt mi vel, condimentum nulla.</p>
+            </div>
+        </div>
+    </div>
+
+    <h1>Final Project</h1>
+    <!-- <div id="map"></div> -->
+    <div id="slider-container">
+        <input type="range" min="1996" max="2023" value="1996" id="yearSlider">
+        <p id="daYear">Year: 1996</p>
+    </div>
+    <div id="imageContainer" style="position: absolute; bottom: 10px; left: 10px; z-index: 1000;"></div>
+    <script src="./UpdateStates3.js"></script>
+    <script>
+        var map = L.map('map').setView([39.57182223734374, -94.4384765625000], 4);
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        var geojsonLayer;
+
+        function getColor(year, medLegal, recLegal) {
+        if (medLegal === 0) {
+            return '#A9A9A9'; // Illegal
+        } 
+        if (!medLegal && recLegal) {
+            if (year >= recLegal) {
+                return '#5E67FA'; // Recreational Legal
+            } else {
+                return '#A9A9A9'; // Default color (Illegal or not specified)
+            }
+        }
+        if (medLegal && year >= medLegal && year < recLegal) {
+            return '#83DE7E'; // Medically Legal
+        }
+        return '#A9A9A9'; // Default color (Illegal or not specified)
+    }
+        //SLIDER
+        function style(feature) {
+            var year = document.getElementById("yearSlider").value;
+            var medLegal = feature.properties.year_med;
+            var recLegal = feature.properties.year_rec;
+            return {
+                fillColor: getColor(year, medLegal, recLegal),
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.4
+            };
+        }
+
+        function updateMap(year) {
+            document.getElementById("daYear").innerHTML = 'Year: ' + year;
+            if (geojsonLayer) {
+                map.removeLayer(geojsonLayer);
+            }
+            geojsonLayer = L.geoJSON(statesData, { style: style }).addTo(map);
+        }
+
+        updateMap(1996);
+
+        document.getElementById('yearSlider').addEventListener('input', function() {
+            var year = parseInt(this.value);
+            updateMap(year);
+        });
+
+        //LEGEND
+        var legend = L.control({ position: 'bottomright' });
+
+        legend.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'legend');
+            div.innerHTML += '<div class="legend-title">Legend</div>';
+            div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #A9A9A9;"></div>Illegal</div>';
+            div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #83DE7E;"></div>Medically Legal</div>';
+            div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #1CAB14;"></div>Recreationally Legal</div>';
+            return div;
+        };
+        
+        legend.addTo(map);
+
+        //POPUPS
+        function myPopup(e){
+            console.log(e)
+            // document.getElementById('myInfo').innerHTML = 'Name: ' + e.properties.NAME + '<br>'+ 'Dates: ' + e.properties.dates + '<br>' +
+            //                                       'Rate: ' + e.properties.rate + '<br>' + 'Allocation: ' + e.properties.allocation;}
+        
+
+            var info = '<b>Name:</b> ' + e.properties.NAME + '<br>' + 
+               '<b>Dates:</b> ' + e.properties.dates + '<br>';
+            if (e.properties.rate !== null) {
+                info += '<b>Rate</b>: ' + e.properties.rate + '<br>' + 
+                '<b>Allocation:</b> ' + e.properties.allocation;}
+
+            document.getElementById('myInfo').innerHTML = info}
+        
+        geojsonLayer.eachLayer(function(layer) {
+            layer.on('click', function(e) {
+                myPopup(e.target.feature)
+            });
+        });
+    </script>
+</body>
+</html>
