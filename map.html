@@ -70,7 +70,7 @@
     /* Styling the left div */
     .left-div {
         flex: 1; /* Takes up one third of the screen */
-        background-color: #f0f0f0; /* Light gray */
+        background-color: #cddbf8; /* Light gray */
     }
 
     /* Styling the right div */
@@ -89,21 +89,25 @@
     .content h2 {
         margin-bottom: 10px;
     }
+
+    p{
+        font-size:  20px;
+        font-weight: 100;
+    }
     </style>
 </head>
 <body>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <div class="container">
         <div class="left-div">
             <div class="content">
-                <h2>Tax Revenue by State FIx</h2>
-                <p id="myInfo">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed malesuada, magna sit amet pretium convallis, risus nisl ullamcorper ex, et facilisis risus massa eget nulla. Mauris id sapien euismod, tincidunt mi vel, condimentum nulla.</p>
+                <h2></h2>
+                <p id="myInfo">Click on a state to see their Tax revenue from the sales of recreational Marijuana</p>
+                <div id="barGraph"></div>
             </div>
         </div>
         <div id="map" class="right-div">
             <div class="content">
                 <h2>Right Div (2/3 of Screen)</h2>
-                <canvas id="barChart" width="400" height="400"></canvas>
                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed malesuada, magna sit amet pretium convallis, risus nisl ullamcorper ex, et facilisis risus massa eget nulla. Mauris id sapien euismod, tincidunt mi vel, condimentum nulla.</p>
             </div>
         </div>
@@ -116,7 +120,7 @@
         <p id="daYear">Year: 1996</p>
     </div>
     <div id="imageContainer" style="position: absolute; bottom: 10px; left: 10px; z-index: 1000;"></div>
-    <script src="./UpdateStates3.js"></script>
+    <script src="./Sates4.js"></script>
     <script>
         var map = L.map('map').setView([39.57182223734374, -94.4384765625000], 4);
 
@@ -131,22 +135,20 @@
     if (medLegal === 0 || medLegal > year) {
         return '#A9A9A9'; // Illegal
     } 
-    if (recLegal <= year) {
-        if (medLegal <= year)
-        return 'green'
+    if (recLegal <= year && recLegal != null) {
+        // if (medLegal <= year)
+        return '#3f8893'
     }
     if (medLegal <= year) {
-        return 'pink'
+        return '#a796c7'
     }
     
     }
-
         //SLIDER
         function style(feature) {
             var year = document.getElementById("yearSlider").value;
             var medLegal = feature.properties.year_med;
             var recLegal = feature.properties.year_rec;
-            console.log(year, medLegal, recLegal)
             return {
                 fillColor: getColor(year, medLegal, recLegal),
                 weight: 2,
@@ -157,14 +159,13 @@
             };
         }
 
-        // Define a function to attach the popup event listener
         function attachPopupListener() {
             geojsonLayer.eachLayer(function(layer) {
                 layer.on('click', function(e) {
                     myPopup(e.target.feature);
                 });
             });
-        }
+        }     
         function updateMap(year) {
             document.getElementById("daYear").innerHTML = 'Year: ' + year;
             if (geojsonLayer) {
@@ -200,17 +201,27 @@
         //POPUPS
         function myPopup(e){
             console.log(e)
-            // document.getElementById('myInfo').innerHTML = 'Name: ' + e.properties.NAME + '<br>'+ 'Dates: ' + e.properties.dates + '<br>' +
-            //                                       'Rate: ' + e.properties.rate + '<br>' + 'Allocation: ' + e.properties.allocation;}
-        
-
+            var stateName = e.properties.NAME
+            
             var info = '<b>Name:</b> ' + e.properties.NAME + '<br>' + 
                '<b>Dates:</b> ' + e.properties.dates + '<br>';
             if (e.properties.rate !== null) {
                 info += '<b>Rate</b>: ' + e.properties.rate + '<br>' + 
                 '<b>Allocation:</b> ' + e.properties.allocation;}
 
-            document.getElementById('myInfo').innerHTML = info}
+            var dataData = [];
+            for (var propName in e.properties) {
+                if (propName.startsWith("date_")) {
+                    var value = e.properties[propName]
+                    if (value != null) {dateData.push(value)}
+                    }
+            }
+
+            document.getElementById('myInfo').innerHTML = info;
+            document.querySelector('.left-div .content h2').textContent = 'Tax Revenue for: ' + stateName;
+
+            generateBarGraph(dateData)
+        }
         
         geojsonLayer.eachLayer(function(layer) {
             layer.on('click', function(e) {
@@ -220,62 +231,47 @@
 
 
 
-        // BAR GRAPH
-        function createBarGraph(geojsonLayer) {
-        // Initialize an object to store the counts for each year
-        var counts = {};
-        var stateName = geojsonLayer.feature.find(feature => feature.properties.NAME === stateName);
-        // Iterate through the features
-        geojsonLayer.features.forEach(function(feature) {
-            // Iterate through each property of the feature
-            for (var key in feature.properties) {
-                // Check if the property represents a year (assuming it starts with "year_")
-                if (key.startsWith("date_")) {
-                    var year = key.substring(5); // Extract the year from the key
-                    var number = feature.properties[key]; // Get the number value
-
-                    // Check if the year is not null
-                    if (number !== null) {
-                        // If the year already exists in the counts object, increment the count
-                        if (counts[year]) {
-                            counts[year] += number;
-                        } else {
-                            // Otherwise, initialize the count for the year
-                            counts[year] = number;
-                        }
-                    }
+        // BAR 
+        function generateBarGraph(stateData) {
+            var barGraphElement = document.getElementById('barGraph');
+        barGraphElement.innerHTML = '<canvas id="myChart"></canvas>'; // Add canvas for Chart.js
+        var ctx = document.getElementById('myChart').getContext('2d');
+        
+        const years = [];
+        const revenues = [];
+        for (const key in stateData) {
+            if (key.startsWith('date_')) {
+                const year = key.split('_')[1];
+                var revenue = stateData[key];
+                if (revenue !== null) {
+                    years.push(year);
+                    revenues.push(stateData[key]);
                 }
-            }
-        });
-
-        // Create a bar graph using the counts data
-        // (You can use any chart library of your choice, such as Chart.js or D3.js)
-        // Example using Chart.js:
-        var ctx = document.getElementById('barGraph').getContext('2d');
-        var myChart = new Chart(ctx, {
+                    
+        }
+       
+        new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: Object.keys(counts), // Years
+                labels: years,
                 datasets: [{
-                    label: 'Count',
-                    data: Object.values(counts), // Values
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
+                label: 'Tax Revenue',
+                data: revenues,
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
             }
-        });
-    }
-
-    // Usage example:
-    createBarGraph(statesData);
+        }
+    });
+}
+        }
     </script>
 </body>
 </html>
