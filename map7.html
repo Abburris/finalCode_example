@@ -50,9 +50,13 @@
         }
 
         #slider-container {
-            position: absolute;
-            bottom: 60px;
-            left: 70px; 
+            position: fixed;
+            bottom: 20px;
+            left: 20px; 
+            width:100%;
+            padding: 20px; /* Add padding for better visualization */
+            box-sizing: border-box; 
+            z-index: 1000;
         }
 
         * {
@@ -73,19 +77,17 @@
         background-color: #cddbf8; /* Light gray */
     }
 
-    /* Styling the right div */
+
     .right-div {
-        flex: 2; /* Takes up two thirds of the screen */
-        background-color: #e0e0e0; /* Lighter gray */
+        flex: 2; 
+        background-color: #e0e0e0; 
     }
 
-    /* Adding some padding and margin for better visualization */
     .content {
         padding: 20px;
         margin: 10px;
     }
 
-    /* Just for better visibility */
     .content h2 {
         margin-bottom: 10px;
     }
@@ -93,6 +95,19 @@
     p{
         font-size:  20px;
         font-weight: 100;
+    }
+    #barGraph {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%; 
+    max-height: 300px; 
+    overflow: auto; 
+    }
+
+    #barGraph img {
+        max-width: 100%;
+        height: auto; 
     }
     </style>
 </head>
@@ -104,23 +119,21 @@
                 <p id="myInfo">Click on a state to see their Tax revenue from the sales of recreational Marijuana</p>
                 <div id="barGraph"></div>
             </div>
+            
         </div>
         <div id="map" class="right-div">
             <div class="content">
-                <h2>Right Div (2/3 of Screen)</h2>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed malesuada, magna sit amet pretium convallis, risus nisl ullamcorper ex, et facilisis risus massa eget nulla. Mauris id sapien euismod, tincidunt mi vel, condimentum nulla.</p>
             </div>
         </div>
+        <div id="slider-container">
+            <input type="range" min="1996" max="2023" value="1996" id="yearSlider">
+            <p id="daYear">Year: 1996</p>
+        </div>
     </div>
-
     <h1>Final Project</h1>
     <!-- <div id="map"></div> -->
-    <div id="slider-container">
-        <input type="range" min="1996" max="2023" value="1996" id="yearSlider">
-        <p id="daYear">Year: 1996</p>
-    </div>
     <div id="imageContainer" style="position: absolute; bottom: 10px; left: 10px; z-index: 1000;"></div>
-    <script src="./Sates4.js"></script>
+    <script src="./States6.js"></script>
     <script>
         var map = L.map('map').setView([39.57182223734374, -94.4384765625000], 4);
 
@@ -191,8 +204,8 @@
             var div = L.DomUtil.create('div', 'legend');
             div.innerHTML += '<div class="legend-title">Legend</div>';
             div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #A9A9A9;"></div>Illegal</div>';
-            div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #83DE7E;"></div>Medically Legal</div>';
-            div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #1CAB14;"></div>Recreationally Legal</div>';
+            div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #a796c7;"></div>Medically Legal</div>';
+            div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #3f8893;"></div>Recreationally Legal</div>';
             return div;
         };
         
@@ -204,23 +217,30 @@
             var stateName = e.properties.NAME
             
             var info = '<b>Name:</b> ' + e.properties.NAME + '<br>' + 
-               '<b>Dates:</b> ' + e.properties.dates + '<br>';
+               '<b>Status:</b> ' + e.properties.dates + '<br>';
             if (e.properties.rate !== null) {
                 info += '<b>Rate</b>: ' + e.properties.rate + '<br>' + 
                 '<b>Allocation:</b> ' + e.properties.allocation;}
 
-            var dataData = [];
-            for (var propName in e.properties) {
-                if (propName.startsWith("date_")) {
-                    var value = e.properties[propName]
-                    if (value != null) {dateData.push(value)}
-                    }
-            }
+
+            var imgSrc = "./plots/" + stateName.toLowerCase() + '.png';
+            // var imgHtml = '';
+            
+            // document.getElementById('barGraph').innerHTML = '<img src="' + imgSrc + '" alt="' + stateName + '" style="max-width: 100%; height: auto;">';
+
+            var img = new Image();
+    img.onload = function() {
+        document.getElementById('barGraph').innerHTML = '<img src="' + imgSrc + '" alt="' + stateName + '" style="max-width: 100%; height: auto;">';
+    };
+    img.onerror = function() {
+        console.log("No image found for " + stateName);
+
+    };
+    img.src = imgSrc;
 
             document.getElementById('myInfo').innerHTML = info;
             document.querySelector('.left-div .content h2').textContent = 'Tax Revenue for: ' + stateName;
-
-            generateBarGraph(dateData)
+            document.getElementById('barGraph').innerHTML = '';
         }
         
         geojsonLayer.eachLayer(function(layer) {
@@ -229,49 +249,6 @@
             });
         });
 
-
-
-        // BAR 
-        function generateBarGraph(stateData) {
-            var barGraphElement = document.getElementById('barGraph');
-        barGraphElement.innerHTML = '<canvas id="myChart"></canvas>'; // Add canvas for Chart.js
-        var ctx = document.getElementById('myChart').getContext('2d');
-        
-        const years = [];
-        const revenues = [];
-        for (const key in stateData) {
-            if (key.startsWith('date_')) {
-                const year = key.split('_')[1];
-                var revenue = stateData[key];
-                if (revenue !== null) {
-                    years.push(year);
-                    revenues.push(stateData[key]);
-                }
-                    
-        }
-       
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: years,
-                datasets: [{
-                label: 'Tax Revenue',
-                data: revenues,
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-        }
     </script>
 </body>
 </html>
